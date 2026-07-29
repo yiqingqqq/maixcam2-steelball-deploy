@@ -19,11 +19,34 @@ python -c 'import onnx; onnx.utils.extract_model(
     ["images"],
     [
         "/model.23/Sigmoid_output_0",
-        "/model.23/Mul_2_output_0",
+        "/model.23/dfl/Reshape_1_output_0",
     ],
 )'
 onnxsim tmp_extract.onnx export.onnx
 tar -cf datasets/train.tar -C datasets/train_images .
 
-python -c 'import onnx; m=onnx.load("export.onnx"); onnx.checker.check_model(m); print("input:", [(x.name, [d.dim_value for d in x.type.tensor_type.shape.dim]) for x in m.graph.input]); print("outputs:", [x.name for x in m.graph.output])'
+python - <<'PY'
+import onnx
+
+model = onnx.shape_inference.infer_shapes(onnx.load("export.onnx"))
+onnx.checker.check_model(model)
+
+def shape(value):
+    return [dim.dim_value for dim in value.type.tensor_type.shape.dim]
+
+inputs = {value.name: shape(value) for value in model.graph.input}
+outputs = {value.name: shape(value) for value in model.graph.output}
+expected_inputs = {"images": [1, 3, 480, 640]}
+expected_outputs = {
+    "/model.23/Sigmoid_output_0": [1, 1, 6300],
+    "/model.23/dfl/Reshape_1_output_0": [1, 4, 6300],
+}
+
+print("inputs:", inputs)
+print("outputs:", outputs)
+if inputs != expected_inputs:
+    raise SystemExit(f"unexpected inputs: {inputs}")
+if outputs != expected_outputs:
+    raise SystemExit(f"unexpected outputs: {outputs}")
+PY
 echo "Prepared export.onnx and datasets/train.tar"
