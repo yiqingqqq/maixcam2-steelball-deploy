@@ -12,10 +12,9 @@ out/steelball_yolo11n_640x480_vnpu.axmodel
 
 - Task: YOLO11 Detect, one class: `steel_ball`.
 - Static input: `images`, shape `1x3x480x640` (height x width).
-- Verified internal outputs:
-  - `/model.23/Concat_output_0`
-  - `/model.23/Concat_1_output_0`
-  - `/model.23/Concat_2_output_0`
+- MaixPy `nn.YOLO11` mode-2 outputs (CHW):
+  - `/model.23/Sigmoid_output_0` (`1x1x6300`, class confidence)
+  - `/model.23/Mul_2_output_0` (`1x4x6300`, decoded boxes)
 - Target hardware: `AX620E` / MaixCAM2.
 - Calibration archive: 75 images; conversion config intentionally uses 64.
 - PT and full ONNX were already compared on a 900-frame real MaixCAM2 video and produced identical detections.
@@ -26,7 +25,7 @@ out/steelball_yolo11n_640x480_vnpu.axmodel
 2. Confirm Docker works and locate the installed Pulsar2 image with `docker images | grep pulsar2`.
 3. If no Pulsar2 image exists, help the user download the current official image and load it with `docker load`. Do not invent an image URL.
 4. Run `chmod +x scripts/*.sh` and `./scripts/prepare.sh`.
-5. Confirm `export.onnx` has the three outputs above and static input `1x3x480x640`.
+5. Confirm `export.onnx` has the two outputs above and static input `1x3x480x640`.
 6. Run `PULSAR2_IMAGE=<actual-image-tag> ./scripts/convert.sh`.
 7. Review both Pulsar2 logs. Require successful compiler checks and cosine similarity at least 0.9.
 8. Verify both `.axmodel` files are nonempty and that the `.mud` references their exact basenames.

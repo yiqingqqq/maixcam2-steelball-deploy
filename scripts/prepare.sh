@@ -18,9 +18,8 @@ python -c 'import onnx; onnx.utils.extract_model(
     "tmp_extract.onnx",
     ["images"],
     [
-        "/model.23/Concat_output_0",
-        "/model.23/Concat_1_output_0",
-        "/model.23/Concat_2_output_0",
+        "/model.23/Sigmoid_output_0",
+        "/model.23/Mul_2_output_0",
     ],
 )'
 onnxsim tmp_extract.onnx export.onnx
