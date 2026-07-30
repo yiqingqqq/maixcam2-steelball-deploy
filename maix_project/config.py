@@ -1,7 +1,7 @@
 """Runtime parameters for the MaixCAM2 steel-ball YOLO detector."""
 
 MODEL = {
-    "path": "/root/models/steelball_yolo11n_640x480/steelball_yolo11n_640x480_20260730.mud",
+    "path": "/root/models/steelball_yolo11n_640x480/steelball_yolo11n_640x480.mud",
     "conf_threshold": 0.40,
     "iou_threshold": 0.50,
     "dual_buffer": False,
