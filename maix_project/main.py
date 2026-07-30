@@ -1,9 +1,17 @@
-"""MaixCAM2 real-time steel-ball detection using a converted YOLO11 model."""
+"""MaixCAM2 real-time steel-ball detection using a converted YOLO11 model.
+
+Filter pipeline (order matters for performance):
+  1. YOLO11 raw detections at conf_th / iou_th
+  2. class_id == 0 (steel_ball)
+  3. ROI centre-point check  ← NEW
+  4. area range check        ← NEW
+  5. aspect-ratio check      ← NEW
+  6. highest-confidence pick → at most ONE valid box per frame
+"""
 
 from maix import app, camera, display, image, nn, pinmap, time, uart
 
-from config import DEBUG, MODEL, SERIAL, TRACKING
-
+from config import BALL_FILTER, DEBUG, MODEL, ROI, SERIAL, TRACKING
 
 NO_TARGET = (-1, -1)
 
@@ -29,6 +37,34 @@ def send_position(port, point):
 
 def center_of(obj):
     return int(obj.x + obj.w / 2), int(obj.y + obj.h / 2)
+
+
+def is_valid_steel_ball(obj):
+    """Apply ROI, area, and aspect-ratio filters to a single detection.
+
+    Returns True only when *all* enabled filters pass.
+    """
+    cx, cy = center_of(obj)
+
+    # --- ROI filter: centre must lie inside the configured rectangle ---
+    if ROI["enabled"]:
+        if not (ROI["x"] <= cx <= ROI["x"] + ROI["w"]
+                and ROI["y"] <= cy <= ROI["y"] + ROI["h"]):
+            return False
+
+    # --- area filter ---
+    if BALL_FILTER["enabled"]:
+        area = obj.w * obj.h
+        if area < BALL_FILTER["min_area"] or area > BALL_FILTER["max_area"]:
+            return False
+
+        # --- aspect-ratio filter ---
+        if obj.h > 0:
+            aspect = obj.w / obj.h
+            if aspect < BALL_FILTER["aspect_min"] or aspect > BALL_FILTER["aspect_max"]:
+                return False
+
+    return True
 
 
 def main():
@@ -60,17 +96,30 @@ def main():
 
     while not app.need_exit():
         img = cam.read()
+
+        # 1. raw YOLO11 detections
         objects = detector.detect(
             img,
             conf_th=MODEL["conf_threshold"],
             iou_th=MODEL["iou_threshold"],
         )
+
+        # 2. keep only steel_ball (class_id == 0)
         objects = [obj for obj in objects if obj.class_id == 0]
-        target = max(objects, key=lambda obj: obj.score) if objects else None
+
+        # 3–5. ROI + area + aspect-ratio filtering
+        valid_objects = [obj for obj in objects if is_valid_steel_ball(obj)]
+
+        # 6. per-frame single-best by confidence
+        target = max(valid_objects, key=lambda obj: obj.score) if valid_objects else None
 
         if DEBUG["draw_all_candidates"]:
             for obj in objects:
                 img.draw_rect(obj.x, obj.y, obj.w, obj.h, color=image.COLOR_YELLOW)
+            # draw valid (after filtering) in blue
+            for obj in valid_objects:
+                if obj != target:
+                    img.draw_rect(obj.x, obj.y, obj.w, obj.h, color=image.COLOR_BLUE)
 
         if target is None:
             lost_frames += 1
@@ -109,7 +158,7 @@ def main():
             fps = report_count * 1000.0 / max(1, elapsed)
             if target is None:
                 print(
-                    "[YOLO] fps={:.1f} cand={} target=NONE lost={}".format(
+                    "[YOLO] fps={:.1f} raw={} valid=0 target=NONE lost={}".format(
                         fps, len(objects), lost_frames
                     ),
                     flush=True,
@@ -117,8 +166,9 @@ def main():
             else:
                 cx, cy = center_of(target)
                 print(
-                    "[YOLO] fps={:.1f} cand={} conf={:.3f} box={}x{} center=({},{})".format(
-                        fps, len(objects), target.score, target.w, target.h, cx, cy
+                    "[YOLO] fps={:.1f} raw={} valid={} conf={:.3f} box={}x{} center=({},{})".format(
+                        fps, len(objects), len(valid_objects),
+                        target.score, target.w, target.h, cx, cy
                     ),
                     flush=True,
                 )
