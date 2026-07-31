@@ -3,7 +3,8 @@
 # Deploy maix_project to MaixCAM and configure Linux autostart (Option 1)
 #
 
-MAIX_IP="${1:-172.17.190.231}"
+DEFAULT_IP="maixcam.local"
+MAIX_IP="${1:-$DEFAULT_IP}"
 PROJECT_DIR="$(cd "$(dirname "$0")/../maix_project" && pwd)"
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 

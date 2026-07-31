@@ -4,7 +4,7 @@
 #
 
 DEST_DIR="$HOME/Desktop"
-WIFI_IP="172.17.190.231"
+WIFI_IP="maixcam.local"
 MAIX_IP="${1:-$WIFI_IP}"
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
