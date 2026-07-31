@@ -11,7 +11,7 @@ python -m pip install onnx onnxsim
 
 rm -rf datasets tmp_extract.onnx export.onnx
 mkdir -p datasets/train_images
-unzip -q calibration/steelball_calibration_75.zip -d datasets/train_images
+python -c 'import zipfile; zipfile.ZipFile("calibration/steelball_calibration_75.zip").extractall("datasets/train_images")'
 
 python -c 'import onnx; onnx.utils.extract_model(
     "model/model.onnx",
