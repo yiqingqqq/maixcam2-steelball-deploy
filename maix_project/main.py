@@ -3,9 +3,9 @@
 Features:
   1. Boot-time driver warmup retry mechanism for rock-solid reliability
   2. Microcontroller Serial Command Control (BEGIN / END on UART4 RX)
-  3. Background H.264 Video Recording (/root/recordings)
+  3. Background H.264 Video Recording (/root/recordings) with 30 FPS fixed GOP keyframes
   4. 30 Hz Fixed-rate Metric/Pixel Tracking output ($x,y\r\n) on UART4 TX
-  5. Built-in Minimalist Web Live Video Stream & Telemetry Dashboard (Port 8080)
+  5. 1/100s Locked Shutter Exposure to eliminate 50Hz AC lighting flicker
 """
 
 import ctypes
@@ -26,8 +26,7 @@ for explicit_lib in [
 import time as pytime
 from maix import app, camera, display, image, nn, pinmap, time, uart, video
 
-from config import DEBUG, MODEL, PIPE_ROI, RECORDING, SERIAL, TRACKING, WEB
-from web_server import start_web_server, update_web_state
+from config import DEBUG, MODEL, PIPE_ROI, RECORDING, SERIAL, TRACKING
 
 NO_TARGET = (-1, -1)
 
@@ -48,7 +47,7 @@ class VideoRecorder:
         timestamp = pytime.strftime("%Y%m%d_%H%M%S")
         filepath = os.path.join(self.directory, "rec_{}.h264".format(timestamp))
         try:
-            # Step 1: Explicitly set fps and gop to stabilize keyframes and eliminate H.264 banding
+            # Explicitly set fps and gop to stabilize keyframes and eliminate H.264 banding
             try:
                 self.encoder = video.Encoder(width=width, height=height, fps=fps, gop=gop)
             except Exception:
@@ -175,24 +174,11 @@ def init_detector():
     raise RuntimeError("Failed to initialize YOLO11 detector after 5 attempts")
 
 
-def get_local_ip():
-    """Get the active local IP address of MaixCAM."""
-    try:
-        import socket
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
-        return ip
-    except Exception:
-        return "127.0.0.1"
-
-
 def init_camera(width, height, fmt):
     for attempt in range(5):
         try:
             cam = camera.Camera(width, height, fmt)
-            # Step 2: Lock shutter exposure time to 1/100s (10,000us) to physically match 50Hz AC grid frequency
+            # Lock shutter exposure time to 1/100s (10,000us) to physically match 50Hz AC grid frequency
             for shutter_opt in ["exp_time", "exposure_time", "shutter", "exposure"]:
                 try:
                     cam.set_option(shutter_opt, 10000)
@@ -218,20 +204,12 @@ def main():
     disp = display.Display()
     port = open_serial()
 
-    # Start Minimalist Web Dashboard Server in background thread
-    if WEB.get("enabled", True):
-        try:
-            start_web_server(port=WEB.get("port", 8080))
-        except Exception as exc:
-            print("[WEB SERVER] Could not start web server: {}".format(exc), flush=True)
-
     recorder = VideoRecorder(directory=RECORDING.get("directory", "/root/recordings"))
 
     filtered = None
     lost_frames = 0
     frame_count = 0
     report_count = 0
-    current_fps = 0.0
     report_start = time.ticks_ms()
 
     lost_tolerance = TRACKING.get("lost_tolerance_frames", 3)
@@ -275,21 +253,10 @@ def main():
                     pass
 
             img = cam.read()
-            local_ip = get_local_ip()
 
             if not is_active:
-                img.draw_string(10, 10, "[STANDBY] IP: {}:8080".format(local_ip), color=image.COLOR_YELLOW, scale=1.5)
+                img.draw_string(10, 10, "[STANDBY] Waiting for '{}'...".format(start_cmd), color=image.COLOR_YELLOW, scale=1.5)
                 disp.show(img)
-                if WEB.get("enabled", True):
-                    try:
-                        jpeg_bytes = img.to_jpeg(quality=WEB.get("jpeg_quality", 60)).to_bytes()
-                        update_web_state(jpeg_bytes, {
-                            "x": -1, "y": -1, "conf": 0.0,
-                            "fps": current_fps, "status": "STANDBY",
-                            "recorder": False
-                        })
-                    except Exception:
-                        pass
                 time.sleep_ms(30)
                 continue
 
@@ -384,20 +351,6 @@ def main():
                 report_start = now
 
             disp.show(img)
-
-            # Update Web Server state & stream frame
-            if WEB.get("enabled", True):
-                try:
-                    jpeg_bytes = img.to_jpeg(quality=WEB.get("jpeg_quality", 60)).to_bytes()
-                    update_web_state(jpeg_bytes, {
-                        "x": out_x, "y": out_y,
-                        "conf": float(curr_conf),
-                        "fps": float(current_fps),
-                        "status": "ACTIVE" if is_active else "STANDBY",
-                        "recorder": recorder.active
-                    })
-                except Exception:
-                    pass
 
     finally:
         recorder.stop()

@@ -9,7 +9,7 @@
 RUN_MODE = "serial_tracking"  # 当前运行模式
 
 PIPE_ROI = {
-    "enabled": False,  # 是否启用管道ROI
+    "enabled": True,  # 是否启用管道ROI
     "color_mode": "white",  # 管道颜色：auto/green/white/off
     "x": 0,  # ROI左上角横坐标
     "y": 0,  # ROI左上角纵坐标
@@ -20,7 +20,7 @@ PIPE_ROI = {
 
 MODEL = {
     "path": "/root/maix_project/models/steelball_yolo11n_640x480/steelball_yolo11n_640x480.mud",  # 项目内模型路径
-    "conf_threshold": 0.05,  # 置信度阈值
+    "conf_threshold": 0.02,  # 置信度阈值
     "iou_threshold": 0.50,  # NMS交并比阈值
     "dual_buffer": False,  # 是否启用双缓冲
 }
@@ -54,11 +54,11 @@ TRACKING = {
     "prediction_enabled": True,  # 是否启用短时预测
     "prediction_window_ms": 70,  # 预测最长时间
     "normal_max_dt_ms": 120,  # 正常时间间隔上限
-    "max_speed_mm_s": 6000.0,  # 速度上限
+    "max_speed_mm_s": 7000.0,  # 速度上限
     "max_accel_mm_s2": 40000.0,  # 加速度上限
     # Normal-frame jump rejection remains bounded; reacquisition after loss
     # is intentionally much wider so a fast re-entry can be accepted.
-    "max_step_mm": 220.0,  # 正常单帧位移上限
+    "max_step_mm": 260.0,  # 正常单帧位移上限
     "reacquire_gate_mm": 1000.0,  # 重捕获位移门限
     "position_correction": 1.0,  # 位置修正系数
     "velocity_correction": 0.75,  # 速度修正系数
@@ -146,10 +146,4 @@ PIXEL_DEBUG = {
     "stale_timeout_ms": 150,  # 调试数据过期时间
     "max_dt_ms": 250,  # 最大时间间隔
     "max_speed_px_s": 10000.0,  # 像素速度上限
-}
-
-WEB = {
-    "enabled": True,  # 是否开启 Web 实时图传控制台
-    "port": 8080,     # Web 图传服务器端口 (HTTP & MJPEG)
-    "jpeg_quality": 60,  # MJPEG 压缩质量 (1-100)
 }
