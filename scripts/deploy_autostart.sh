@@ -44,7 +44,7 @@ sed -i '/maix_project\/main.py/d' "${AUTOSTART_FILE}" 2>/dev/null
 echo "" >> "${AUTOSTART_FILE}"
 echo "# MaixCAM steelball autostart" >> "${AUTOSTART_FILE}"
 echo "export LD_LIBRARY_PATH=/opt/usr/lib:/opt/lib:/maixapp/lib:/usr/local/lib:/lib:/usr/lib:\$LD_LIBRARY_PATH" >> "${AUTOSTART_FILE}"
-echo "(export LD_LIBRARY_PATH=/opt/usr/lib:/opt/lib:/maixapp/lib:/usr/local/lib:/lib:/usr/lib:\$LD_LIBRARY_PATH && sleep 3 && cd /root/maix_project && python3 main.py > /root/app.log 2>&1) &" >> "${AUTOSTART_FILE}"
+echo "(sleep 2 && killall -9 maixapp 2>/dev/null; pkill -9 maixapp 2>/dev/null; sleep 1 && cd /root/maix_project && python3 main.py > /root/app.log 2>&1) &" >> "${AUTOSTART_FILE}"
 echo "[REMOTE] Successfully configured autostart with 3s boot delay in ${AUTOSTART_FILE}."
 EOF
 
