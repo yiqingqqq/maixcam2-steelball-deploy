@@ -10,11 +10,7 @@ RUN_MODE = "serial_tracking"  # 当前运行模式
 
 CAMERA = {
     # 快门曝光时间(微秒 us):
-    #   10000 = 1/100 秒 (标准消 50Hz 工频屏闪，推荐室内)
-    #   20000 = 1/50 秒  (更长曝光，适合暗光环境调亮画面)
-    #   5000  = 1/200 秒 (极速曝光，运动物体更清晰防拖影)
-    #   0     = 自动曝光 (Auto Exposure)
-    "shutter_us": 10000,
+    "shutter_us": 16666,
     "anti_flicker_hz": 50,  # 抗频闪频率：50 / 60
 }
 
@@ -140,7 +136,7 @@ SERIAL = {
 }
 
 DEBUG = {
-    "display_period_ms": 66,  # 预览推流周期 (66ms ≈ 15 FPS)，设为 0 表示全速推流
+    "display_period_ms": 0,  # 预览推流周期 (66ms ≈ 15 FPS)，设为 0 表示全速推流
     "metrics_interval_ms": 1000,  # 指标打印周期
     "motion_print_enabled": True,  # 是否打印运动数据
     "motion_print_interval_ms": 100,  # 运动数据周期
