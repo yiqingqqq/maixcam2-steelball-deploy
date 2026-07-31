@@ -188,6 +188,12 @@ def init_camera(width, height, fmt):
     for attempt in range(5):
         try:
             cam = camera.Camera(width, height, fmt)
+            # Enable 50Hz Anti-Flicker suppression to eliminate AC lighting band artifacts
+            for opt_key, opt_val in [("anti_flicker", 50), ("flicker", 50), ("anti_flicker", 1)]:
+                try:
+                    cam.set_option(opt_key, opt_val)
+                except Exception:
+                    pass
             return cam
         except Exception as exc:
             print("[WARN] Camera init attempt {} failed ({}), retrying in 1s...".format(attempt + 1, exc), flush=True)
