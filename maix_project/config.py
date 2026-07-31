@@ -130,7 +130,7 @@ SERIAL = {
     # In uncalibrated mode this is the image x origin; right is positive.
     "target_center_mm": 320.0,  # 位置零点横坐标
     # EMA for reported velocity: 0.0=very smooth, 1.0=no filtering.
-    "velocity_ema_alpha": 0.30,  # 速度EMA系数
+    "velocity_ema_alpha": 0.35,  # 速度EMA系数
     # False preserves the existing $position,speed protocol. True appends status.
     "include_status": False,  # 是否附加状态
 }

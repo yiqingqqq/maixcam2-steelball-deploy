@@ -300,7 +300,7 @@ def main():
                         img.draw_rect(obj.x, obj.y, obj.w, obj.h, color=image.COLOR_BLUE)
 
             curr_conf = 0.0
-            now_ms = time.ticks_ms()
+            now_sec = pytime.time()
 
             if target is None:
                 lost_frames += 1
@@ -327,17 +327,17 @@ def main():
                         smooth_alpha * raw_y + (1.0 - smooth_alpha) * filtered[1],
                     )
 
-                # --- Sliding Window Average X-Speed Calculation (px/ks, min 2 frames up to 5 frames) ---
-                history_5f.append((filtered[0], now_ms))
+                # --- 5-Frame Sliding Window Average X-Speed Calculation (px/ks) ---
+                history_5f.append((filtered[0], now_sec))
                 if len(history_5f) > 5:
                     history_5f.pop(0)
 
                 if len(history_5f) >= 2:
                     old_x, old_t = history_5f[0]
                     cur_x, cur_t = history_5f[-1]
-                    dt_s = time.ticks_diff(cur_t, old_t) / 1000.0
-                    if dt_s > 0.005:
-                        vx_5f = int(round((cur_x - old_x) * 1000.0 / dt_s))
+                    dt_sec = cur_t - old_t
+                    if dt_sec > 0.005:
+                        vx_5f = int(round((cur_x - old_x) * 1000.0 / dt_sec))
                     else:
                         vx_5f = 0
                 else:
