@@ -41,14 +41,18 @@ class VideoRecorder:
         self.file = None
         self.encoder = None
 
-    def start(self, width=640, height=480):
+    def start(self, width=640, height=480, fps=30, gop=30):
         if self.active:
             return
         os.makedirs(self.directory, exist_ok=True)
         timestamp = pytime.strftime("%Y%m%d_%H%M%S")
         filepath = os.path.join(self.directory, "rec_{}.h264".format(timestamp))
         try:
-            self.encoder = video.Encoder(width=width, height=height)
+            # Step 1: Explicitly set fps and gop to stabilize keyframes and eliminate H.264 banding
+            try:
+                self.encoder = video.Encoder(width=width, height=height, fps=fps, gop=gop)
+            except Exception:
+                self.encoder = video.Encoder(width=width, height=height)
             self.file = open(filepath, "wb")
             self.active = True
             print("[RECORDER] Started recording -> {}".format(filepath), flush=True)
@@ -188,10 +192,15 @@ def init_camera(width, height, fmt):
     for attempt in range(5):
         try:
             cam = camera.Camera(width, height, fmt)
-            # Enable 50Hz Anti-Flicker suppression to eliminate AC lighting band artifacts
-            for opt_key, opt_val in [("anti_flicker", 50), ("flicker", 50), ("anti_flicker", 1)]:
+            # Step 2: Lock shutter exposure time to 1/100s (10,000us) to physically match 50Hz AC grid frequency
+            for shutter_opt in ["exp_time", "exposure_time", "shutter", "exposure"]:
                 try:
-                    cam.set_option(opt_key, opt_val)
+                    cam.set_option(shutter_opt, 10000)
+                except Exception:
+                    pass
+            for flicker_opt in [("anti_flicker", 50), ("flicker", 50), ("anti_flicker", 1)]:
+                try:
+                    cam.set_option(flicker_opt[0], flicker_opt[1])
                 except Exception:
                     pass
             return cam
