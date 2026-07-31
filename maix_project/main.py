@@ -26,7 +26,7 @@ for explicit_lib in [
 import time as pytime
 from maix import app, camera, display, image, nn, pinmap, time, uart, video
 
-from config import DEBUG, MODEL, PIPE_ROI, RECORDING, SERIAL, TRACKING
+from config import CAMERA, DEBUG, MODEL, PIPE_ROI, RECORDING, SERIAL, TRACKING
 
 NO_TARGET = (-1, -1)
 
@@ -175,20 +175,23 @@ def init_detector():
 
 
 def init_camera(width, height, fmt):
+    shutter_us = CAMERA.get("shutter_us", 10000)
+    flicker_hz = CAMERA.get("anti_flicker_hz", 50)
     for attempt in range(5):
         try:
             cam = camera.Camera(width, height, fmt)
-            # Lock shutter exposure time to 1/100s (10,000us) to physically match 50Hz AC grid frequency
-            for shutter_opt in ["exp_time", "exposure_time", "shutter", "exposure"]:
-                try:
-                    cam.set_option(shutter_opt, 10000)
-                except Exception:
-                    pass
-            for flicker_opt in [("anti_flicker", 50), ("flicker", 50), ("anti_flicker", 1)]:
-                try:
-                    cam.set_option(flicker_opt[0], flicker_opt[1])
-                except Exception:
-                    pass
+            if shutter_us > 0:
+                for shutter_opt in ["exp_time", "exposure_time", "shutter", "exposure"]:
+                    try:
+                        cam.set_option(shutter_opt, shutter_us)
+                    except Exception:
+                        pass
+            if flicker_hz > 0:
+                for flicker_opt in [("anti_flicker", flicker_hz), ("flicker", flicker_hz), ("anti_flicker", 1)]:
+                    try:
+                        cam.set_option(flicker_opt[0], flicker_opt[1])
+                    except Exception:
+                        pass
             return cam
         except Exception as exc:
             print("[WARN] Camera init attempt {} failed ({}), retrying in 1s...".format(attempt + 1, exc), flush=True)
