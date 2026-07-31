@@ -161,6 +161,19 @@ def init_detector():
     raise RuntimeError("Failed to initialize YOLO11 detector after 5 attempts")
 
 
+def get_local_ip():
+    """Get the active local IP address of MaixCAM."""
+    try:
+        import socket
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
+
 def init_camera(width, height, fmt):
     for attempt in range(5):
         try:
@@ -237,9 +250,10 @@ def main():
                     pass
 
             img = cam.read()
+            local_ip = get_local_ip()
 
             if not is_active:
-                img.draw_string(10, 10, "[STANDBY] Waiting for '{}'...".format(start_cmd), color=image.COLOR_YELLOW, scale=1.5)
+                img.draw_string(10, 10, "[STANDBY] IP: {}:8080".format(local_ip), color=image.COLOR_YELLOW, scale=1.5)
                 disp.show(img)
                 if WEB.get("enabled", True):
                     try:
