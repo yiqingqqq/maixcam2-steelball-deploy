@@ -214,6 +214,7 @@ def main():
 
     filtered = None
     history_5f = []
+    last_vx_5f = 0
     lost_frames = 0
     frame_count = 0
     report_count = 0
@@ -306,10 +307,13 @@ def main():
                 if lost_frames > lost_tolerance:
                     filtered = None
                     history_5f = []
+                    last_vx_5f = 0
                     send_tracking(port, -1, -1)
                     out_x, out_y = -1, -1
                 else:
-                    out_x, out_y = (int(filtered[0]), int(filtered[1])) if filtered else (-1, -1)
+                    out_x, out_y = (int(round(filtered[0])), int(round(filtered[1]))) if filtered else (-1, -1)
+                    if out_x != -1:
+                        send_tracking(port, out_x, last_vx_5f)
             else:
                 lost_frames = 0
                 curr_conf = target.score
@@ -323,16 +327,16 @@ def main():
                         smooth_alpha * raw_y + (1.0 - smooth_alpha) * filtered[1],
                     )
 
-                # --- 5-Frame Sliding Window Average X-Speed Calculation (px/ks) ---
+                # --- Sliding Window Average X-Speed Calculation (px/ks, min 2 frames up to 5 frames) ---
                 history_5f.append((filtered[0], now_ms))
                 if len(history_5f) > 5:
                     history_5f.pop(0)
 
-                if len(history_5f) == 5:
+                if len(history_5f) >= 2:
                     old_x, old_t = history_5f[0]
                     cur_x, cur_t = history_5f[-1]
                     dt_s = time.ticks_diff(cur_t, old_t) / 1000.0
-                    if dt_s > 0.01:
+                    if dt_s > 0.005:
                         vx_5f = int(round((cur_x - old_x) * 1000.0 / dt_s))
                     else:
                         vx_5f = 0
@@ -342,6 +346,7 @@ def main():
                 output_x = int(round(filtered[0]))
                 output_y = int(round(filtered[1]))
                 out_x, out_y = output_x, output_y
+                last_vx_5f = vx_5f
 
                 # Send absolute X position and 5-frame average X-speed (px/ks) over serial
                 send_tracking(port, output_x, vx_5f)
