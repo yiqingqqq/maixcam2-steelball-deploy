@@ -109,7 +109,7 @@ def send_tracking(port, x, vx_5f):
     if x == -1 and vx_5f == -1:
         packet = "$-1,-1\r\n"
     else:
-        packet = "${},{:.3f}\r\n".format(x, vx_5f)
+        packet = "${},{:.6f}\r\n".format(x, vx_5f)
     if port is not None:
         port.write_str(packet)
     if SERIAL.get("print_tx", True):
@@ -323,7 +323,7 @@ def main():
                         smooth_alpha * raw_y + (1.0 - smooth_alpha) * filtered[1],
                     )
 
-                # --- 5-Frame Sliding Window Average X-Speed Calculation (px/ms) ---
+                # --- 5-Frame Sliding Window Average X-Speed Calculation (px/us) ---
                 history_5f.append((filtered[0], now_ms))
                 if len(history_5f) > 5:
                     history_5f.pop(0)
@@ -331,9 +331,9 @@ def main():
                 if len(history_5f) == 5:
                     old_x, old_t = history_5f[0]
                     cur_x, cur_t = history_5f[-1]
-                    dt_ms = time.ticks_diff(cur_t, old_t)
-                    if dt_ms > 10:
-                        vx_5f = (cur_x - old_x) / float(dt_ms)
+                    dt_us = time.ticks_diff(cur_t, old_t) * 1000.0  # ms to us
+                    if dt_us > 10000.0:
+                        vx_5f = (cur_x - old_x) / dt_us  # px/us
                     else:
                         vx_5f = 0.0
                 else:
@@ -343,7 +343,7 @@ def main():
                 output_y = int(round(filtered[1]))
                 out_x, out_y = output_x, output_y
 
-                # Send absolute X position and 5-frame average X-speed (px/ms) over serial
+                # Send absolute X position and 5-frame average X-speed (px/us) over serial
                 send_tracking(port, output_x, vx_5f)
 
                 img.draw_rect(target.x, target.y, target.w, target.h,
@@ -353,7 +353,7 @@ def main():
                 img.draw_string(
                     target.x,
                     max(0, target.y - 20),
-                    "ball {:.2f} x={} vx={:.3f}px/ms".format(target.score, output_x, vx_5f),
+                    "ball {:.2f} x={} vx={:.6f}px/us".format(target.score, output_x, vx_5f),
                     color=image.COLOR_GREEN,
                 )
 
