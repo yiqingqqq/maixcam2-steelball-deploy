@@ -1,8 +1,8 @@
-path: dataset
-train:
-  - train.txt
-  - hard_negatives/images
-val: val.txt
-test: test.txt
 names:
   0: steel_ball
+path: "/Users/yiqing/Documents/\u7535\u8D5B& AT/2026\u7535\u8D5B/maixcam2-steelball-deploy-dataset/dataset"
+test: test.txt
+train:
+- train.txt
+- hard_negatives/images
+val: val.txt

@@ -1,0 +1,32 @@
+{
+  "version": "7.0.4",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "steel_ball",
+      "points": [
+        [
+          474.4477088528679,
+          995.9378896508728
+        ],
+        [
+          453.9325903990025,
+          1020.2910692019949
+        ],
+        [
+          507.524197319202,
+          1016.6137390897755
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "polygon",
+      "flags": {},
+      "mask": null
+    }
+  ],
+  "imagePath": "robot_10.jpg",
+  "imageData": null,
+  "imageHeight": 1024,
+  "imageWidth": 768
+}

@@ -1,36 +1,21 @@
-images/all/-3.jpg
-images/all/-3_aug_01_c90_r90_none.jpg
-images/all/-3_aug_02_c82_r180_horizontal.jpg
-images/all/-3_aug_03_c76_r270_vertical.jpg
-images/all/-3_crop_only_c68.jpg
-images/all/-9.jpg
-images/all/-9_batch_aug_01_c92_r90_none.jpg
-images/all/-9_batch_aug_02_c86_r180_horizontal.jpg
-images/all/-9_batch_aug_03_c80_r270_vertical.jpg
-images/all/-9_batch_crop_only_c72.jpg
-images/all/5.jpg
-images/all/5_crop_only_c68.jpg
-images/all/5_new_aug_10_c94_r270_none.jpg
-images/all/5_new_aug_11_c84_r0_horizontal.jpg
-images/all/7.jpg
-images/all/7_crop_only_c70.jpg
-images/all/7_new_aug_14_c92_r270_vertical.jpg
-images/all/7_new_aug_15_c80_r0_horizontal.jpg
-images/all/far2.jpg
-images/all/far2_batch_aug_01_c92_r90_none.jpg
-images/all/far2_batch_aug_02_c86_r180_horizontal.jpg
-images/all/far2_batch_aug_03_c80_r270_vertical.jpg
-images/all/far2_batch_crop_only_c72.jpg
-images/all/flash2.jpg
-images/all/flash2_aug_01_c90_r90_none.jpg
-images/all/flash2_aug_02_c82_r180_horizontal.jpg
-images/all/flash2_aug_03_c76_r270_vertical.jpg
-images/all/flash2_crop_only_c72.jpg
-images/all/flash5.jpg
-images/all/flash5_aug_01_c90_r90_none.jpg
-images/all/flash5_aug_02_c82_r180_horizontal.jpg
-images/all/flash5_aug_03_c76_r270_vertical.jpg
-images/all/flash5_crop_only_c70.jpg
-images/all/small_target_01_r0_horizontal_flash5.jpg
-images/all/small_target_02_r90_none_flash5.jpg
-images/all/small_target_03_r180_vertical_flash5.jpg
+/Users/yiqing/Documents/电赛& AT/2026电赛/maixcam2-steelball-deploy-dataset/dataset/images/all/-3.jpg
+/Users/yiqing/Documents/电赛& AT/2026电赛/maixcam2-steelball-deploy-dataset/dataset/images/all/-3_aug_01_c90_r90_none.jpg
+/Users/yiqing/Documents/电赛& AT/2026电赛/maixcam2-steelball-deploy-dataset/dataset/images/all/-3_aug_02_c82_r180_horizontal.jpg
+/Users/yiqing/Documents/电赛& AT/2026电赛/maixcam2-steelball-deploy-dataset/dataset/images/all/-3_aug_03_c76_r270_vertical.jpg
+/Users/yiqing/Documents/电赛& AT/2026电赛/maixcam2-steelball-deploy-dataset/dataset/images/all/-3_crop_only_c68.jpg
+/Users/yiqing/Documents/电赛& AT/2026电赛/maixcam2-steelball-deploy-dataset/dataset/images/all/-9.jpg
+/Users/yiqing/Documents/电赛& AT/2026电赛/maixcam2-steelball-deploy-dataset/dataset/images/all/-9_batch_aug_01_c92_r90_none.jpg
+/Users/yiqing/Documents/电赛& AT/2026电赛/maixcam2-steelball-deploy-dataset/dataset/images/all/-9_batch_aug_02_c86_r180_horizontal.jpg
+/Users/yiqing/Documents/电赛& AT/2026电赛/maixcam2-steelball-deploy-dataset/dataset/images/all/-9_batch_aug_03_c80_r270_vertical.jpg
+/Users/yiqing/Documents/电赛& AT/2026电赛/maixcam2-steelball-deploy-dataset/dataset/images/all/-9_batch_crop_only_c72.jpg
+/Users/yiqing/Documents/电赛& AT/2026电赛/maixcam2-steelball-deploy-dataset/dataset/images/all/flash5.jpg
+/Users/yiqing/Documents/电赛& AT/2026电赛/maixcam2-steelball-deploy-dataset/dataset/images/all/flash5_aug_01_c90_r90_none.jpg
+/Users/yiqing/Documents/电赛& AT/2026电赛/maixcam2-steelball-deploy-dataset/dataset/images/all/flash5_aug_02_c82_r180_horizontal.jpg
+/Users/yiqing/Documents/电赛& AT/2026电赛/maixcam2-steelball-deploy-dataset/dataset/images/all/flash5_aug_03_c76_r270_vertical.jpg
+/Users/yiqing/Documents/电赛& AT/2026电赛/maixcam2-steelball-deploy-dataset/dataset/images/all/flash5_crop_only_c70.jpg
+/Users/yiqing/Documents/电赛& AT/2026电赛/maixcam2-steelball-deploy-dataset/dataset/images/all/small_target_01_r0_horizontal_flash5.jpg
+/Users/yiqing/Documents/电赛& AT/2026电赛/maixcam2-steelball-deploy-dataset/dataset/images/all/small_target_02_r90_none_flash5.jpg
+/Users/yiqing/Documents/电赛& AT/2026电赛/maixcam2-steelball-deploy-dataset/dataset/images/all/small_target_03_r180_vertical_flash5.jpg
+/Users/yiqing/Documents/电赛& AT/2026电赛/maixcam2-steelball-deploy-dataset/dataset/images/all/manual_robot_03_orig.jpg
+/Users/yiqing/Documents/电赛& AT/2026电赛/maixcam2-steelball-deploy-dataset/dataset/images/all/manual_robot_06_orig.jpg
+/Users/yiqing/Documents/电赛& AT/2026电赛/maixcam2-steelball-deploy-dataset/dataset/images/all/manual_robot_09_orig.jpg
