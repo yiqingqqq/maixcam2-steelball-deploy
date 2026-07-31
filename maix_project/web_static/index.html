@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MaixCAM2 视觉图传控制台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="2" y1="12" x2="22" y2="12"></line>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+        </svg>
+      </div>
+      <span class="brand-title">MaixCAM2 视觉图传控制台</span>
+      <span class="badge badge-online" id="connection-status">● 已连接</span>
+    </div>
+    <div class="header-actions">
+      <span class="sys-time" id="sys-time">00:00:00</span>
+    </div>
+  </header>
+
+  <!-- Main Container Layout -->
+  <main class="dashboard-grid">
+
+    <!-- Left Main Column: Video Live Feed -->
+    <section class="card video-card">
+      <div class="card-header">
+        <div class="card-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+          实时图传监控 (MJPEG 30 FPS)
+        </div>
+        <div class="video-badges">
+          <span class="pill pill-status" id="mode-pill">STANDBY</span>
+          <span class="pill pill-rec" id="rec-pill">● 录像中</span>
+        </div>
+      </div>
+      <div class="video-container">
+        <img id="video-stream" src="/video_feed" alt="实时画面" onerror="handleStreamError(this)">
+        <canvas id="overlay-canvas"></canvas>
+      </div>
+    </section>
+
+    <!-- Right Side Column: Metric Cards & Trajectory Chart -->
+    <aside class="sidebar">
+
+      <!-- Realtime Metric Cards (2x2 Grid) -->
+      <div class="metrics-grid">
+        <div class="card metric-card">
+          <div class="metric-label">X 轴坐标 (Px)</div>
+          <div class="metric-value" id="val-x">--</div>
+          <div class="metric-foot">靶心基准: 320</div>
+        </div>
+
+        <div class="card metric-card">
+          <div class="metric-label">Y 轴坐标 (Px)</div>
+          <div class="metric-value" id="val-y">--</div>
+          <div class="metric-foot">靶心基准: 240</div>
+        </div>
+
+        <div class="card metric-card">
+          <div class="metric-label">识别置信度</div>
+          <div class="metric-value metric-conf" id="val-conf">0.00</div>
+          <div class="metric-foot">YOLO11 算法模型</div>
+        </div>
+
+        <div class="card metric-card">
+          <div class="metric-label">实时帧率</div>
+          <div class="metric-value metric-fps" id="val-fps">0.0</div>
+          <div class="metric-foot">串口 30Hz 推送</div>
+        </div>
+      </div>
+
+      <!-- Realtime Trajectory Line Chart -->
+      <div class="card chart-card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            钢球动态轨迹波形曲线 (X / Y)
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="trajectory-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- Quick Control Panel -->
+      <div class="card control-card">
+        <div class="card-header">
+          <div class="card-title">系统快速交互控制</div>
+        </div>
+        <div class="control-actions">
+          <button class="btn btn-secondary" onclick="syncVideosWireless()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            同步视频至桌面
+          </button>
+          <button class="btn btn-outline" onclick="resetChart()">清空波形曲线</button>
+        </div>
+      </div>
+
+    </aside>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

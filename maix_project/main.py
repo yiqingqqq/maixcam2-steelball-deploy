@@ -5,6 +5,7 @@ Features:
   2. Microcontroller Serial Command Control (BEGIN / END on UART4 RX)
   3. Background H.264 Video Recording (/root/recordings)
   4. 30 Hz Fixed-rate Metric/Pixel Tracking output ($x,y\r\n) on UART4 TX
+  5. Built-in Minimalist Web Live Video Stream & Telemetry Dashboard (Port 8080)
 """
 
 import ctypes
@@ -25,7 +26,8 @@ for explicit_lib in [
 import time as pytime
 from maix import app, camera, display, image, nn, pinmap, time, uart, video
 
-from config import DEBUG, MODEL, PIPE_ROI, RECORDING, SERIAL, TRACKING
+from config import DEBUG, MODEL, PIPE_ROI, RECORDING, SERIAL, TRACKING, WEB
+from web_server import start_web_server, update_web_state
 
 NO_TARGET = (-1, -1)
 
@@ -178,12 +180,20 @@ def main():
     disp = display.Display()
     port = open_serial()
 
+    # Start Minimalist Web Dashboard Server in background thread
+    if WEB.get("enabled", True):
+        try:
+            start_web_server(port=WEB.get("port", 8080))
+        except Exception as exc:
+            print("[WEB SERVER] Could not start web server: {}".format(exc), flush=True)
+
     recorder = VideoRecorder(directory=RECORDING.get("directory", "/root/recordings"))
 
     filtered = None
     lost_frames = 0
     frame_count = 0
     report_count = 0
+    current_fps = 0.0
     report_start = time.ticks_ms()
 
     lost_tolerance = TRACKING.get("lost_tolerance_frames", 3)
@@ -231,6 +241,16 @@ def main():
             if not is_active:
                 img.draw_string(10, 10, "[STANDBY] Waiting for '{}'...".format(start_cmd), color=image.COLOR_YELLOW, scale=1.5)
                 disp.show(img)
+                if WEB.get("enabled", True):
+                    try:
+                        jpeg_bytes = img.to_jpeg(quality=WEB.get("jpeg_quality", 60)).to_bytes()
+                        update_web_state(jpeg_bytes, {
+                            "x": -1, "y": -1, "conf": 0.0,
+                            "fps": current_fps, "status": "STANDBY",
+                            "recorder": False
+                        })
+                    except Exception:
+                        pass
                 time.sleep_ms(30)
                 continue
 
@@ -263,13 +283,18 @@ def main():
                     if obj != target:
                         img.draw_rect(obj.x, obj.y, obj.w, obj.h, color=image.COLOR_BLUE)
 
+            curr_conf = 0.0
             if target is None:
                 lost_frames += 1
                 if lost_frames > lost_tolerance:
                     filtered = None
                     send_position(port, NO_TARGET)
+                    out_x, out_y = -1, -1
+                else:
+                    out_x, out_y = (int(filtered[0]), int(filtered[1])) if filtered else (-1, -1)
             else:
                 lost_frames = 0
+                curr_conf = target.score
                 raw_x, raw_y = center_of(target)
                 if filtered is None:
                     filtered = (float(raw_x), float(raw_y))
@@ -279,6 +304,7 @@ def main():
                         smooth_alpha * raw_y + (1.0 - smooth_alpha) * filtered[1],
                     )
                 output = int(round(filtered[0])), int(round(filtered[1]))
+                out_x, out_y = output[0], output[1]
                 send_position(port, output)
 
                 img.draw_rect(target.x, target.y, target.w, target.h,
@@ -297,12 +323,12 @@ def main():
             now = time.ticks_ms()
             elapsed = time.ticks_diff(now, report_start)
             if elapsed >= DEBUG.get("metrics_interval_ms", 1000):
-                fps = report_count * 1000.0 / max(1, elapsed)
+                current_fps = report_count * 1000.0 / max(1, elapsed)
                 rec_status = "REC" if recorder.active else "ACTIVE"
                 if target is None:
                     print(
                         "[YOLO] fps={:.1f} status={} raw={} valid=0 target=NONE lost={}".format(
-                            fps, rec_status, len(objects), lost_frames
+                            current_fps, rec_status, len(objects), lost_frames
                         ),
                         flush=True,
                     )
@@ -310,7 +336,7 @@ def main():
                     cx, cy = center_of(target)
                     print(
                         "[YOLO] fps={:.1f} status={} raw={} valid={} conf={:.3f} box={}x{} center=({},{})".format(
-                            fps, rec_status, len(objects), len(valid_objects),
+                            current_fps, rec_status, len(objects), len(valid_objects),
                             target.score, target.w, target.h, cx, cy
                         ),
                         flush=True,
@@ -319,6 +345,21 @@ def main():
                 report_start = now
 
             disp.show(img)
+
+            # Update Web Server state & stream frame
+            if WEB.get("enabled", True):
+                try:
+                    jpeg_bytes = img.to_jpeg(quality=WEB.get("jpeg_quality", 60)).to_bytes()
+                    update_web_state(jpeg_bytes, {
+                        "x": out_x, "y": out_y,
+                        "conf": float(curr_conf),
+                        "fps": float(current_fps),
+                        "status": "ACTIVE" if is_active else "STANDBY",
+                        "recorder": recorder.active
+                    })
+                except Exception:
+                    pass
+
     finally:
         recorder.stop()
 

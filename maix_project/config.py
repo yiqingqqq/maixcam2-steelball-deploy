@@ -147,3 +147,9 @@ PIXEL_DEBUG = {
     "max_dt_ms": 250,  # 最大时间间隔
     "max_speed_px_s": 10000.0,  # 像素速度上限
 }
+
+WEB = {
+    "enabled": True,  # 是否开启 Web 实时图传控制台
+    "port": 8080,     # Web 图传服务器端口 (HTTP & MJPEG)
+    "jpeg_quality": 60,  # MJPEG 压缩质量 (1-100)
+}
