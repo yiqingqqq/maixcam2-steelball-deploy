@@ -26,7 +26,7 @@ PIPE_ROI = {
 
 MODEL = {
     "path": "/root/maix_project/models/steelball_yolo11n_640x480/steelball_yolo11n_640x480.mud",  # 项目内模型路径
-    "conf_threshold": 0.02,  # 置信度阈值
+    "conf_threshold": 0.03,  # 置信度阈值
     "iou_threshold": 0.50,  # NMS交并比阈值
     "dual_buffer": False,  # 是否启用双缓冲
 }
@@ -49,9 +49,9 @@ TRACKING = {
     "association_base_gate_px": 45.0,  # 基础关联距离
     # Wider gate accommodates a fast ball; after association reset the gate
     # is bypassed because selector.last is cleared.
-    "association_max_gate_px": 280.0,  # 关联距离上限
+    "association_max_gate_px": 240.0,  # 关联距离上限
     "association_reset_ms": 200,  # 多久后清除旧目标
-    "confidence_weight": 0.35,  # 置信度权重
+    "confidence_weight": 0.37,  # 置信度权重
     "distance_weight": 0.50,  # 距离权重
     "area_weight": 0.13,  # 面积权重
     # Time-domain motion limits.
@@ -85,7 +85,7 @@ CALIBRATION = {
 }
 
 RECORDING = {
-    "enabled": True,  # 是否开启录像支持
+    "enabled": False,  # 是否开启录像支持
     "directory": "/root/recordings",  # 录像保存目录
     "framerate": 30,  # 录像帧率
     "bitrate": 3000000,  # 录像码率

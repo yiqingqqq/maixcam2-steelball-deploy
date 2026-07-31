@@ -105,8 +105,11 @@ def open_serial():
     return None
 
 
-def send_position(port, point):
-    packet = "${},{}\r\n".format(point[0], point[1])
+def send_tracking(port, x, vx_5f):
+    if x == -1 and vx_5f == -1:
+        packet = "$-1,-1\r\n"
+    else:
+        packet = "${},{}\r\n".format(x, vx_5f)
     if port is not None:
         port.write_str(packet)
     if SERIAL.get("print_tx", True):
@@ -210,6 +213,7 @@ def main():
     recorder = VideoRecorder(directory=RECORDING.get("directory", "/root/recordings"))
 
     filtered = None
+    history_5f = []
     lost_frames = 0
     frame_count = 0
     report_count = 0
@@ -245,12 +249,14 @@ def main():
                             print("[UART RX] Matched START command {!r} -> Activating recording & tracking".format(start_cmd), flush=True)
                             is_active = True
                             rx_buffer = ""
+                            history_5f = []
                             if RECORDING.get("enabled", True):
                                 recorder.start(width, height)
                         elif stop_cmd.upper() in upper_buf:
                             print("[UART RX] Matched STOP command {!r} -> Standby mode & stop recording".format(stop_cmd), flush=True)
                             is_active = False
                             rx_buffer = ""
+                            history_5f = []
                             recorder.stop()
                 except Exception as exc:
                     pass
@@ -293,11 +299,14 @@ def main():
                         img.draw_rect(obj.x, obj.y, obj.w, obj.h, color=image.COLOR_BLUE)
 
             curr_conf = 0.0
+            now_ms = time.ticks_ms()
+
             if target is None:
                 lost_frames += 1
                 if lost_frames > lost_tolerance:
                     filtered = None
-                    send_position(port, NO_TARGET)
+                    history_5f = []
+                    send_tracking(port, -1, -1)
                     out_x, out_y = -1, -1
                 else:
                     out_x, out_y = (int(filtered[0]), int(filtered[1])) if filtered else (-1, -1)
@@ -305,6 +314,7 @@ def main():
                 lost_frames = 0
                 curr_conf = target.score
                 raw_x, raw_y = center_of(target)
+
                 if filtered is None:
                     filtered = (float(raw_x), float(raw_y))
                 else:
@@ -312,18 +322,38 @@ def main():
                         smooth_alpha * raw_x + (1.0 - smooth_alpha) * filtered[0],
                         smooth_alpha * raw_y + (1.0 - smooth_alpha) * filtered[1],
                     )
-                output = int(round(filtered[0])), int(round(filtered[1]))
-                out_x, out_y = output[0], output[1]
-                send_position(port, output)
+
+                # --- 5-Frame Sliding Window Average X-Speed Calculation (px/s) ---
+                history_5f.append((filtered[0], now_ms))
+                if len(history_5f) > 5:
+                    history_5f.pop(0)
+
+                if len(history_5f) == 5:
+                    old_x, old_t = history_5f[0]
+                    cur_x, cur_t = history_5f[-1]
+                    dt_s = time.ticks_diff(cur_t, old_t) / 1000.0
+                    if dt_s > 0.01:
+                        vx_5f = int(round((cur_x - old_x) / dt_s))
+                    else:
+                        vx_5f = 0
+                else:
+                    vx_5f = 0
+
+                output_x = int(round(filtered[0]))
+                output_y = int(round(filtered[1]))
+                out_x, out_y = output_x, output_y
+
+                # Send absolute X position and 5-frame average X-speed over serial
+                send_tracking(port, output_x, vx_5f)
 
                 img.draw_rect(target.x, target.y, target.w, target.h,
                               color=image.COLOR_GREEN, thickness=3)
-                img.draw_circle(output[0], output[1], 5,
+                img.draw_circle(output_x, output_y, 5,
                                 color=image.COLOR_RED, thickness=-1)
                 img.draw_string(
                     target.x,
                     max(0, target.y - 20),
-                    "ball {:.2f} ({},{})".format(target.score, output[0], output[1]),
+                    "ball {:.2f} x={} vx={}px/s".format(target.score, output_x, vx_5f),
                     color=image.COLOR_GREEN,
                 )
 
