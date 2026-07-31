@@ -144,6 +144,16 @@ def is_valid_steel_ball(obj):
 
 def init_detector():
     model_path = MODEL["path"]
+    if not os.path.exists(model_path):
+        alt_paths = [
+            "/root/maix_project/models/steelball_yolo11n_640x480/steelball_yolo11n_640x480.mud",
+            "/root/models/steelball_yolo11n_640x480/steelball_yolo11n_640x480.mud",
+            os.path.join(os.path.dirname(__file__), "models", "steelball_yolo11n_640x480", "steelball_yolo11n_640x480.mud")
+        ]
+        for alt in alt_paths:
+            if os.path.exists(alt):
+                model_path = alt
+                break
     print("loading model:", model_path, flush=True)
     for attempt in range(5):
         try:
