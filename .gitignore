@@ -5,3 +5,5 @@ tmp_extract.onnx
 tmp_npu/
 tmp_vnpu/
 __pycache__/
+.DS_Store
+runs/

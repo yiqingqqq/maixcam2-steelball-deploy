@@ -1,0 +1,6 @@
+path: /Users/yiqing/Documents/电赛& AT/2026电赛/maixcam2-steelball-deploy-dataset/dataset
+train: train.txt
+val: train.txt
+
+names:
+  0: steelball
