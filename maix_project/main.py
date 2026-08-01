@@ -231,54 +231,17 @@ def main():
     lost_tolerance = TRACKING.get("lost_tolerance_frames", 3)
     smooth_alpha = TRACKING.get("smooth_alpha", SERIAL.get("velocity_ema_alpha", 0.35))
 
-    start_cmd = SERIAL.get("start_cmd", "BEGIN")
-    stop_cmd = SERIAL.get("stop_cmd", "END")
+    # Start recording immediately upon launch if enabled
+    if RECORDING.get("enabled", True):
+        recorder.start(width, height)
 
-    # If wait_command is True (default), boot in standby until receiving BEGIN from MCU
-    is_active = not SERIAL.get("wait_command", True)
-    rx_buffer = ""
-
-    print("[SYSTEM] Ready. Standby mode: wait_command={}, start_cmd={!r}, stop_cmd={!r}".format(
-        SERIAL.get("wait_command", True), start_cmd, stop_cmd), flush=True)
+    print("[SYSTEM] System Active. Direct tracking & recording running immediately upon launch.", flush=True)
 
     try:
         while not app.need_exit():
-            # --- Check UART RX commands from MCU ---
-            if port is not None:
-                try:
-                    data = port.read()
-                    if data:
-                        rx_str = data.decode("ascii", errors="ignore")
-                        print("[UART RX RAW]", repr(rx_str), flush=True)
-                        rx_buffer += rx_str
-                        if len(rx_buffer) > 128:
-                            rx_buffer = rx_buffer[-128:]
-                        upper_buf = rx_buffer.upper()
-                        if start_cmd.upper() in upper_buf:
-                            print("[UART RX] Matched START command {!r} -> Activating recording & tracking".format(start_cmd), flush=True)
-                            is_active = True
-                            rx_buffer = ""
-                            history_5f = []
-                            if RECORDING.get("enabled", True):
-                                recorder.start(width, height)
-                        elif stop_cmd.upper() in upper_buf:
-                            print("[UART RX] Matched STOP command {!r} -> Standby mode & stop recording".format(stop_cmd), flush=True)
-                            is_active = False
-                            rx_buffer = ""
-                            history_5f = []
-                            recorder.stop()
-                except Exception as exc:
-                    pass
-
             img = cam.read()
 
-            if not is_active:
-                img.draw_string(10, 10, "[STANDBY] Waiting for '{}'...".format(start_cmd), color=image.COLOR_YELLOW, scale=1.5)
-                disp.show(img)
-                time.sleep_ms(30)
-                continue
-
-            # Record clean frame when active
+            # Record frame continuously
             if RECORDING.get("enabled", True):
                 if not recorder.active:
                     recorder.start(width, height)
