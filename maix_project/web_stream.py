@@ -13,6 +13,7 @@ from socketserver import ThreadingMixIn
 
 _latest_jpeg = None
 _lock = threading.Lock()
+_frame_ready = threading.Event()
 
 HTML_DASHBOARD = """<!DOCTYPE html>
 <html lang="zh-CN">
@@ -43,11 +44,11 @@ HTML_DASHBOARD = """<!DOCTYPE html>
     </div>
     <div class="view-box">
         <div class="spinner" id="loader"></div>
-        <img id="stream" src="" alt="Live Stream" style="display: none;">
+        <img id="stream" src="/video_feed" alt="Live Stream" style="display: none;">
     </div>
     <div class="footer">
-        <span>模式: JS 双缓存平滑图传</span>
-        <span id="status">帧率: 渲染中...</span>
+        <span id="mode">模式: MJPEG 低延迟图传</span>
+        <span id="status">帧率: 连接中...</span>
     </div>
 </div>
 
@@ -58,40 +59,36 @@ HTML_DASHBOARD = """<!DOCTYPE html>
         const status = document.getElementById('status');
         const fpsBadge = document.getElementById('fpsBadge');
         
-        let frameCount = 0;
-        let lastTime = Date.now();
-        let isFirstFrame = true;
+        let fallbackStarted = false;
 
-        function fetchFrame() {
+        img.onload = function() {
+            loader.style.display = 'none';
+            img.style.display = 'block';
+            status.innerText = fallbackStarted ? "单帧备用流" : "MJPEG 实时连接";
+            fpsBadge.innerText = "● LIVE";
+        };
+
+        // Safari handles a single persistent MJPEG image reliably. If the
+        // connection itself fails, use slow snapshot polling as a fallback.
+        img.onerror = function() {
+            if (!fallbackStarted) {
+                fallbackStarted = true;
+                document.getElementById('mode').innerText = "模式: 单帧备用图传";
+                fetchFallbackFrame();
+            }
+        };
+
+        function fetchFallbackFrame() {
             const tempImg = new Image();
-            const timestamp = Date.now();
-
             tempImg.onload = function() {
                 img.src = tempImg.src;
-                if (isFirstFrame) {
-                    isFirstFrame = false;
-                    loader.style.display = 'none';
-                    img.style.display = 'block';
-                }
-                frameCount++;
-                if (timestamp - lastTime >= 1000) {
-                    const fps = Math.round((frameCount * 1000) / (timestamp - lastTime));
-                    status.innerText = "实时帧率: " + fps + " FPS";
-                    fpsBadge.innerText = "● LIVE " + fps + " FPS";
-                    frameCount = 0;
-                    lastTime = timestamp;
-                }
-                setTimeout(fetchFrame, 30);
+                setTimeout(fetchFallbackFrame, 200);
             };
-
             tempImg.onerror = function() {
-                setTimeout(fetchFrame, 100);
+                setTimeout(fetchFallbackFrame, 500);
             };
-
-            tempImg.src = "/frame.jpg?t=" + timestamp;
+            tempImg.src = "/frame.jpg?t=" + Date.now();
         }
-
-        fetchFrame();
     })();
 </script>
 </body>
@@ -100,23 +97,28 @@ HTML_DASHBOARD = """<!DOCTYPE html>
 
 
 def update_frame(img, quality=65):
-    """Mirror current frame to JPEG byte buffer for browser streaming."""
+    """Publish a frame for browsers and return its encoded JPEG bytes."""
     global _latest_jpeg
     if img is None:
-        return
+        return None
     try:
         jpeg_bytes = img.to_jpeg(quality=quality).to_bytes()
         with _lock:
             _latest_jpeg = jpeg_bytes
+        _frame_ready.set()
+        return jpeg_bytes
     except Exception:
-        pass
+        return None
 
 
 class _ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
     daemon_threads = True
+    request_queue_size = 2
 
 
 class _MJPEGHandler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+
     def log_message(self, format, *args):
         pass  # Suppress HTTP access log clutter
 
@@ -132,29 +134,35 @@ class _MJPEGHandler(BaseHTTPRequestHandler):
             return
 
         elif self.path in ["/video_feed", "/video"]:
-            # Serve MJPEG Stream
+            # Serve standards-compliant MJPEG. Safari keeps one <img> request
+            # open instead of repeatedly creating snapshot connections.
             self.send_response(200)
             self.send_header("Content-Type", "multipart/x-mixed-replace; boundary=frame")
             self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+            self.send_header("Connection", "keep-alive")
             self.end_headers()
             while True:
                 with _lock:
                     jpg = _latest_jpeg
                 if jpg is not None:
                     try:
-                        self.wfile.write(b"--frame\r\n")
-                        self.send_header("Content-Type", "image/jpeg")
-                        self.send_header("Content-Length", str(len(jpg)))
-                        self.end_headers()
-                        self.wfile.write(jpg)
-                        self.wfile.write(b"\r\n")
+                        self.wfile.write(
+                            b"--frame\r\n"
+                            b"Content-Type: image/jpeg\r\n"
+                            + "Content-Length: {}\r\n\r\n".format(len(jpg)).encode("ascii")
+                            + jpg
+                            + b"\r\n"
+                        )
+                        self.wfile.flush()
                     except Exception:
                         break
-                time.sleep(0.033)  # ~30 FPS
+                time.sleep(0.1)  # 10 FPS is sufficient for browser preview.
             return
 
         elif self.path.startswith("/frame.jpg"):
-            # Serve single JPEG snapshot with no caching
+            # Give camera/model startup a short grace period before returning 503.
+            _frame_ready.wait(2.0)
             with _lock:
                 jpg = _latest_jpeg
             if jpg is not None:

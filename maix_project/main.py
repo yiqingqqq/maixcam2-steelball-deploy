@@ -10,7 +10,9 @@ Features:
 
 import ctypes
 import os
+import queue
 import sys
+import threading
 
 # Preload core C++ shared libraries in RTLD_GLOBAL mode for standalone Linux execution
 for explicit_lib in [
@@ -43,6 +45,8 @@ class VideoRecorder:
         self.active = False
         self.session_dir = None
         self.frame_count = 0
+        self._queue = queue.Queue(maxsize=2)
+        self._worker = None
 
     def start(self, width=640, height=480, fps=30):
         if self.active:
@@ -62,24 +66,59 @@ class VideoRecorder:
                 pass
 
         self.active = True
+        self._worker = threading.Thread(target=self._writer_loop)
+        self._worker.daemon = True
+        self._worker.start()
         print("[RECORDER] Started JPEG Frame Sequence Recording -> {}".format(self.session_dir), flush=True)
 
-    def write(self, img):
+    def write(self, jpeg_bytes):
+        """Queue an already encoded frame without blocking the main loop."""
         if not self.active or not self.session_dir:
             return
+        if jpeg_bytes is None:
+            return
         try:
-            self.frame_count += 1
-            frame_path = os.path.join(self.session_dir, "frame_{:06d}.jpg".format(self.frame_count))
-            jpeg_bytes = img.to_jpeg(quality=85).to_bytes()
-            with open(frame_path, "wb") as f:
-                f.write(jpeg_bytes)
-        except Exception:
-            pass
+            self._queue.put_nowait(jpeg_bytes)
+        except queue.Full:
+            # Storage must never stall detection or the live web preview.
+            try:
+                self._queue.get_nowait()
+            except queue.Empty:
+                return
+            try:
+                self._queue.put_nowait(jpeg_bytes)
+            except queue.Full:
+                pass
+
+    def _writer_loop(self):
+        while True:
+            jpeg_bytes = self._queue.get()
+            if jpeg_bytes is None:
+                break
+            try:
+                next_frame = self.frame_count + 1
+                frame_path = os.path.join(self.session_dir, "frame_{:06d}.jpg".format(next_frame))
+                with open(frame_path, "wb") as f:
+                    f.write(jpeg_bytes)
+                self.frame_count = next_frame
+            except Exception:
+                pass
 
     def stop(self):
         if not self.active:
             return
         try:
+            while True:
+                try:
+                    self._queue.put_nowait(None)
+                    break
+                except queue.Full:
+                    try:
+                        self._queue.get_nowait()
+                    except queue.Empty:
+                        break
+            if self._worker is not None:
+                self._worker.join(timeout=2.0)
             if self.session_dir and self.frame_count > 0:
                 meta_path = os.path.join(self.session_dir, "meta.json")
                 with open(meta_path, "w") as f:
@@ -91,6 +130,7 @@ class VideoRecorder:
             self.active = False
             self.session_dir = None
             self.frame_count = 0
+            self._worker = None
 
 
 def open_serial():
@@ -218,6 +258,10 @@ def main():
     cam = init_camera(width, height, detector.input_format())
     disp = display.Display()
     port = open_serial()
+
+    # Publish one warm-up frame before accepting HTTP requests.
+    first_img = cam.read()
+    update_frame(first_img)
     start_streamer(port=8000)
 
     recorder = VideoRecorder(directory=RECORDING.get("directory", "/root/recordings"))
@@ -242,12 +286,6 @@ def main():
     try:
         while not app.need_exit():
             img = cam.read()
-
-            # Record frame continuously
-            if RECORDING.get("enabled", True):
-                if not recorder.active:
-                    recorder.start(width, height)
-                recorder.write(img)
 
             # 1. raw YOLO11 detections
             objects = detector.detect(
@@ -362,7 +400,13 @@ def main():
                 report_start = now
 
             disp.show(img)
-            update_frame(img)
+            jpeg_bytes = update_frame(img, quality=85)
+
+            # JPEG is already available to the web UI; only file I/O is queued.
+            if RECORDING.get("enabled", True):
+                if not recorder.active:
+                    recorder.start(width, height)
+                recorder.write(jpeg_bytes)
 
     finally:
         recorder.stop()
