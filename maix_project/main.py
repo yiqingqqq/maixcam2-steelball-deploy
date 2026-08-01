@@ -30,6 +30,7 @@ from config import CAMERA, DEBUG, MODEL, PIPE_ROI, RECORDING, SERIAL, TRACKING
 
 import json
 import shutil
+from web_stream import start_streamer, update_frame
 
 NO_TARGET = (-1, -1)
 
@@ -217,6 +218,7 @@ def main():
     cam = init_camera(width, height, detector.input_format())
     disp = display.Display()
     port = open_serial()
+    start_streamer(port=8000)
 
     recorder = VideoRecorder(directory=RECORDING.get("directory", "/root/recordings"))
 
@@ -360,6 +362,7 @@ def main():
                 report_start = now
 
             disp.show(img)
+            update_frame(img)
 
     finally:
         recorder.stop()
