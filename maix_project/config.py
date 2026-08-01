@@ -10,7 +10,7 @@ RUN_MODE = "serial_tracking"  # 当前运行模式
 
 CAMERA = {
     # 快门曝光时间(微秒 us):
-    "shutter_us": 16666,
+    "shutter_us": 10000,
     "anti_flicker_hz": 50,  # 抗频闪频率：50 / 60
 }
 
@@ -85,7 +85,7 @@ CALIBRATION = {
 }
 
 RECORDING = {
-    "enabled": False,  # 是否开启录像支持
+    "enabled": True ,  # 是否开启录像支持
     "directory": "/root/recordings",  # 录像保存目录
     "framerate": 30,  # 录像帧率
     "bitrate": 3000000,  # 录像码率

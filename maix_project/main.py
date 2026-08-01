@@ -28,43 +28,50 @@ from maix import app, camera, display, image, nn, pinmap, time, uart, video
 
 from config import CAMERA, DEBUG, MODEL, PIPE_ROI, RECORDING, SERIAL, TRACKING
 
+import json
+import shutil
+
 NO_TARGET = (-1, -1)
 
 
 class VideoRecorder:
-    """Background hardware H.264 video recorder for MaixCAM."""
+    """Frame Sequence Recorder (.jpg sequence + player.html) eliminating inter-frame flicker."""
 
     def __init__(self, directory="/root/recordings"):
         self.directory = directory
         self.active = False
-        self.file = None
-        self.encoder = None
+        self.session_dir = None
+        self.frame_count = 0
 
-    def start(self, width=640, height=480, fps=30, gop=30):
+    def start(self, width=640, height=480, fps=30):
         if self.active:
             return
         os.makedirs(self.directory, exist_ok=True)
         timestamp = pytime.strftime("%Y%m%d_%H%M%S")
-        filepath = os.path.join(self.directory, "rec_{}.h264".format(timestamp))
-        try:
-            # Explicitly set fps and gop to stabilize keyframes and eliminate H.264 banding
+        self.session_dir = os.path.join(self.directory, "session_{}".format(timestamp))
+        os.makedirs(self.session_dir, exist_ok=True)
+        self.frame_count = 0
+
+        # Copy player.html into the session folder for instant browser playback
+        src_player = os.path.join(os.path.dirname(__file__), "player.html")
+        if os.path.exists(src_player):
             try:
-                self.encoder = video.Encoder(width=width, height=height, fps=fps, gop=gop)
+                shutil.copy(src_player, os.path.join(self.session_dir, "player.html"))
             except Exception:
-                self.encoder = video.Encoder(width=width, height=height)
-            self.file = open(filepath, "wb")
-            self.active = True
-            print("[RECORDER] Started recording -> {}".format(filepath), flush=True)
-        except Exception as exc:
-            print("[RECORDER] Failed to start encoder: {}".format(exc), flush=True)
+                pass
+
+        self.active = True
+        print("[RECORDER] Started JPEG Frame Sequence Recording -> {}".format(self.session_dir), flush=True)
 
     def write(self, img):
-        if not self.active or self.encoder is None or self.file is None:
+        if not self.active or not self.session_dir:
             return
         try:
-            frame = self.encoder.encode(img)
-            if frame:
-                self.file.write(frame.to_bytes())
+            self.frame_count += 1
+            frame_path = os.path.join(self.session_dir, "frame_{:06d}.jpg".format(self.frame_count))
+            jpeg_bytes = img.to_jpeg(quality=85).to_bytes()
+            with open(frame_path, "wb") as f:
+                f.write(jpeg_bytes)
         except Exception:
             pass
 
@@ -72,16 +79,17 @@ class VideoRecorder:
         if not self.active:
             return
         try:
-            if self.file:
-                self.file.flush()
-                self.file.close()
-            print("[RECORDER] Stopped recording and saved file.", flush=True)
+            if self.session_dir and self.frame_count > 0:
+                meta_path = os.path.join(self.session_dir, "meta.json")
+                with open(meta_path, "w") as f:
+                    json.dump({"total_frames": self.frame_count, "fps": 30}, f)
+            print("[RECORDER] Stopped JPEG Recording. Saved {} frames in {}".format(self.frame_count, self.session_dir), flush=True)
         except Exception as exc:
             print("[RECORDER] Error stopping recorder: {}".format(exc), flush=True)
         finally:
             self.active = False
-            self.encoder = None
-            self.file = None
+            self.session_dir = None
+            self.frame_count = 0
 
 
 def open_serial():

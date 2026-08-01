@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高精无屏闪视频播放器 - MaixCAM</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background: #0f172a; color: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+        .player-card { background: #1e293b; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); overflow: hidden; width: 100%; max-width: 800px; border: 1px solid #334155; }
+        .video-container { position: relative; width: 100%; background: #000; display: flex; align-items: center; justify-content: center; min-height: 480px; }
+        .video-container img { width: 100%; height: auto; display: block; object-fit: contain; }
+        .badge { position: absolute; top: 16px; left: 16px; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+        .controls { padding: 16px 24px; display: flex; flex-direction: column; gap: 12px; background: #1e293b; }
+        .timeline { width: 100%; -webkit-appearance: none; appearance: none; height: 6px; border-radius: 3px; background: #475569; outline: none; cursor: pointer; }
+        .timeline::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #38bdf8; cursor: pointer; transition: transform 0.1s; }
+        .btn-group { display: flex; align-items: center; justify-content: space-between; }
+        .btn-left { display: flex; align-items: center; gap: 16px; }
+        button { background: #38bdf8; border: none; color: #0f172a; font-weight: 700; padding: 8px 18px; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-size: 14px; }
+        button:hover { background: #0284c7; color: #fff; }
+        .time-display { font-family: "JetBrains Mono", monospace; font-size: 14px; color: #94a3b8; }
+    </style>
+</head>
+<body>
+
+<div class="player-card">
+    <div class="video-container">
+        <span class="badge">● HD 30FPS 无屏闪放映机</span>
+        <img id="frameViewer" src="frame_000001.jpg" alt="Frame">
+    </div>
+    <div class="controls">
+        <input type="range" id="timeline" class="timeline" min="1" max="1" value="1">
+        <div class="btn-group">
+            <div class="btn-left">
+                <button id="playBtn">播放</button>
+                <span class="time-display" id="timeLabel">00:00 / 00:00 (Frame 1)</span>
+            </div>
+            <span class="time-display" style="color: #38bdf8;">MaixCAM 高清捕捉</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    let totalFrames = 1;
+    let currentFrame = 1;
+    let isPlaying = false;
+    let fps = 30;
+    let timer = null;
+
+    const imgNode = document.getElementById('frameViewer');
+    const playBtn = document.getElementById('playBtn');
+    const timeline = document.getElementById('timeline');
+    const timeLabel = document.getElementById('timeLabel');
+
+    // Attempt to load meta.json
+    fetch('meta.json')
+        .then(res => res.json())
+        .then(data => {
+            if (data.total_frames) {
+                totalFrames = data.total_frames;
+                timeline.max = totalFrames;
+                updateTimeLabel();
+            }
+        })
+        .catch(() => {
+            // Auto detect frames if meta.json is absent
+            detectTotalFrames();
+        });
+
+    function formatFrameName(num) {
+        return 'frame_' + String(num).padStart(6, '0') + '.jpg';
+    }
+
+    function showFrame(num) {
+        currentFrame = Math.min(Math.max(1, num), totalFrames);
+        imgNode.src = formatFrameName(currentFrame);
+        timeline.value = currentFrame;
+        updateTimeLabel();
+    }
+
+    function updateTimeLabel() {
+        let curSec = Math.floor((currentFrame - 1) / fps);
+        let totSec = Math.floor(totalFrames / fps);
+        let curStr = String(Math.floor(curSec / 60)).padStart(2, '0') + ':' + String(curSec % 60).padStart(2, '0');
+        let totStr = String(Math.floor(totSec / 60)).padStart(2, '0') + ':' + String(totSec % 60).padStart(2, '0');
+        timeLabel.innerText = `${curStr} / ${totStr} (Frame ${currentFrame}/${totalFrames})`;
+    }
+
+    function play() {
+        if (isPlaying) return;
+        isPlaying = true;
+        playBtn.innerText = '暂停';
+        timer = setInterval(() => {
+            if (currentFrame >= totalFrames) {
+                currentFrame = 1;
+            } else {
+                currentFrame++;
+            }
+            showFrame(currentFrame);
+        }, 1000 / fps);
+    }
+
+    function pause() {
+        isPlaying = false;
+        playBtn.innerText = '播放';
+        if (timer) clearInterval(timer);
+    }
+
+    playBtn.addEventListener('click', () => {
+        if (isPlaying) pause(); else play();
+    });
+
+    timeline.addEventListener('input', (e) => {
+        pause();
+        showFrame(parseInt(e.target.value));
+    });
+
+    function detectTotalFrames() {
+        let testIdx = 1;
+        function checkNext() {
+            let testImg = new Image();
+            testImg.onload = () => {
+                totalFrames = testIdx;
+                timeline.max = totalFrames;
+                updateTimeLabel();
+                testIdx += 5;
+                if (testIdx < 10000) checkNext();
+            };
+            testImg.src = formatFrameName(testIdx);
+        }
+        checkNext();
+    }
+</script>
+</body>
+</html>
