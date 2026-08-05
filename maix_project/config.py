@@ -26,7 +26,7 @@ PIPE_ROI = {
 
 MODEL = {
     "path": "/root/maix_project/models/steelball_yolo11n_640x480/steelball_yolo11n_640x480.mud",  # 项目内模型路径
-    "conf_threshold": 0.03,  # 置信度阈值
+    "conf_threshold": 0.1,  # 置信度阈值
     "iou_threshold": 0.50,  # NMS交并比阈值
     "dual_buffer": False,  # 是否启用双缓冲
 }
